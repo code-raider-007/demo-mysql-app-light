@@ -1,11 +1,14 @@
 package com.example.mysql.service.db.impl;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +20,7 @@ import com.example.mysql.service.db.ArticleDbService;
 @SpringBootTest
 class ArticleDbServiceImplTest {
 	
-	
+	private Long articleId;
 	
 	@Autowired
 	private ArticleDbService articleDbService;
@@ -26,9 +29,18 @@ class ArticleDbServiceImplTest {
 	void setUp() throws Exception {
 		
 		Article article = getNewArticle("Article Title", "This is the body of the article");
-		this.articleDbService.saveOrUpdateArticle(article);
+		article = this.articleDbService.saveOrUpdateArticle(article);
+		articleId = article.getArticleId();
 		Article article2 = getNewArticle("Second Article Title", "This is the body of the second article");
 		this.articleDbService.saveOrUpdateArticle(article2);
+	}
+	
+	@AfterEach
+	void tearDown() {
+		this.articleDbService.getAllArticles().forEach(article -> {
+			this.articleDbService.deleteArticle(article.getArticleId());
+		});
+		this.articleId = null;
 	}
 
 	@Test
@@ -41,7 +53,7 @@ class ArticleDbServiceImplTest {
 
 	@Test
 	void testGetArticle() {
-		Article article = this.articleDbService.getArticle(Long.valueOf(1));
+		Article article = this.articleDbService.getArticle(articleId);
 		assertNotNull(article);
 		assertEquals(article.getTitle(), "Article Title");
 	}
@@ -57,14 +69,13 @@ class ArticleDbServiceImplTest {
 
 	@Test
 	void testDeleteArticle() {
-		Article article = this.articleDbService.getArticle(Long.valueOf(1));
+		Article article = this.articleDbService.getAllArticles().iterator().next();
 		assertNotNull(article);
-		assertEquals(article.getArticleId(), Long.valueOf(1));
 		
 		this.articleDbService.deleteArticle(article.getArticleId());
 		
 		Exception exception = assertThrows(NoSuchElementException.class, () ->{
-			this.articleDbService.getArticle(Long.valueOf(1));
+			this.articleDbService.getArticle(article.getArticleId());
 		});
 		
 		assertTrue(exception.getMessage().contains("No value present"));
